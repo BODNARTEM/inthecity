@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My City — Team Up! Map Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sky:#7fd4ff;--sky2:#bdeaff;--grass:#8ed968;--grass-dark:#6cbf4a;
+    --road:#5b6472;--road-line:#ffd84d;--sun:#ffd23f;--coral:#ff6b6b;--coral-dark:#e84f4f;
+    --blue:#2a9df4;--blue-dark:#1c7fd1;--ink:#27313f;--paper:#fffdf6;--shadow:0 6px 0 rgba(0,0,0,.12);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);
+    background:radial-gradient(circle at 80% -10%, var(--sun) 0 9%, transparent 9.5%),
+      linear-gradient(180deg,var(--sky) 0%, var(--sky2) 55%, var(--grass) 55%, var(--grass-dark) 100%);
+    min-height:100vh;overflow-x:hidden;}
+  .wrap{max-width:980px;margin:0 auto;padding:14px 14px 40px;}
+  header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+  h1{font-family:'Fredoka',sans-serif;font-weight:700;margin:0;font-size:clamp(24px,5vw,40px);
+    color:#fff;text-shadow:0 3px 0 var(--coral),0 5px 8px rgba(0,0,0,.2);letter-spacing:.5px;}
+  .right{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .score{background:var(--paper);border:4px solid #fff;border-radius:999px;padding:8px 18px;
+    font-family:'Fredoka',sans-serif;font-weight:700;font-size:22px;box-shadow:var(--shadow);
+    display:flex;align-items:center;gap:6px;white-space:nowrap;}
+  .sound-toggle{font-family:'Fredoka',sans-serif;font-weight:600;font-size:16px;border:none;cursor:pointer;
+    border-radius:999px;padding:9px 16px;color:#fff;background:var(--coral);box-shadow:0 4px 0 var(--coral-dark);}
+  .sound-toggle.on{background:var(--grass-dark);box-shadow:0 4px 0 #4f9b2e;}
+  .steps{display:flex;gap:8px;margin:6px 0 14px;}
+  .step{flex:1;background:rgba(255,255,255,.55);border:3px solid #fff;border-radius:16px;padding:8px 10px;
+    font-weight:800;text-align:center;font-size:14px;transition:transform .12s, background .2s;}
+  .step.active{background:var(--sun);transform:translateY(-2px) scale(1.02);box-shadow:var(--shadow);}
+  .step .n{display:inline-flex;width:22px;height:22px;border-radius:50%;background:var(--coral);color:#fff;
+    align-items:center;justify-content:center;margin-right:6px;font-family:'Fredoka',sans-serif;}
+  .panel{background:var(--paper);border-radius:22px;border:5px solid #fff;box-shadow:var(--shadow);padding:14px;margin-bottom:14px;}
+  .panel h2{font-family:'Fredoka',sans-serif;margin:0 0 4px;font-size:20px;color:var(--blue-dark);display:flex;align-items:center;gap:8px;}
+  .hint{margin:0 0 12px;font-weight:700;color:#6b7585;font-size:14px;}
+  .tray{display:flex;flex-wrap:wrap;gap:8px;}
+  .tile{border:none;cursor:pointer;font-family:'Nunito';font-weight:800;font-size:15px;background:#fff;
+    border:3px solid #e7e1cf;border-radius:14px;padding:8px 12px;display:flex;align-items:center;gap:7px;
+    color:var(--ink);transition:transform .1s, border-color .15s, opacity .2s;box-shadow:0 3px 0 rgba(0,0,0,.08);}
+  .tile:hover{transform:translateY(-2px);}
+  .tile .em{font-size:20px;}
+  .tile.selected{border-color:var(--coral);background:#fff3f3;transform:scale(1.06);box-shadow:0 0 0 4px rgba(255,107,107,.25);}
+  .tile.used{opacity:.32;pointer-events:none;text-decoration:line-through;}
+  .city{position:relative;background:linear-gradient(160deg,#9be06f,#79c94f);border-radius:22px;
+    border:5px solid #fff;box-shadow:var(--shadow);overflow:hidden;}
+  .grid{position:relative;z-index:2;display:grid;grid-template-columns:repeat(4,1fr);gap:34px;padding:34px;}
+  .lot{background:rgba(255,255,255,.55);border:3px dashed #4f9b2e;border-radius:16px;min-height:96px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;
+    font-weight:800;color:#3d7a22;text-align:center;gap:4px;transition:transform .12s, background .2s, box-shadow .2s;padding:6px;}
+  .lot:hover{background:rgba(255,255,255,.8);transform:translateY(-2px);}
+  .lot.droppable{box-shadow:0 0 0 4px var(--sun);background:#fff;animation:pulse 1s infinite;}
+  @keyframes pulse{50%{box-shadow:0 0 0 8px rgba(255,210,63,.5);}}
+  .lot .plus{font-size:30px;opacity:.5;}
+  .lot.filled{background:#fff;border-style:solid;border-color:#fff;color:var(--ink);box-shadow:0 4px 0 rgba(0,0,0,.12);}
+  .lot.filled .bem{font-size:40px;line-height:1;filter:drop-shadow(0 2px 1px rgba(0,0,0,.15));}
+  .lot.filled .blabel{font-size:13px;}
+  .bus{position:absolute;top:1px;font-size:30px;z-index:3;animation:drive 9s linear infinite;}
+  @keyframes drive{0%{left:-50px;}100%{left:100%;}}
+  .tram{position:absolute;bottom:2px;font-size:30px;z-index:3;animation:drive2 11s linear infinite;}
+  @keyframes drive2{0%{right:-50px;transform:scaleX(-1);}100%{right:100%;transform:scaleX(-1);}}
+  .btn{font-family:'Fredoka',sans-serif;font-weight:600;font-size:18px;border:none;cursor:pointer;
+    border-radius:16px;padding:12px 22px;color:#fff;background:var(--blue);box-shadow:0 5px 0 var(--blue-dark);
+    transition:transform .08s, box-shadow .08s;}
+  .btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--blue-dark);}
+  .btn.coral{background:var(--coral);box-shadow:0 5px 0 var(--coral-dark);}
+  .btn.green{background:var(--grass-dark);box-shadow:0 5px 0 #4f9b2e;}
+  .btn.ghost{background:#fff;color:var(--ink);box-shadow:0 5px 0 #d9d3c2;}
+  .btn[disabled]{opacity:.45;pointer-events:none;}
+  .btnrow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:14px;}
+  #talk{display:none;}
+  .stage{display:flex;align-items:flex-start;gap:14px;margin-bottom:10px;}
+  .guy{font-size:64px;line-height:1;flex:none;animation:bob 2.2s ease-in-out infinite;}
+  @keyframes bob{50%{transform:translateY(-6px) rotate(-3deg);}}
+  .bubble{position:relative;background:#fff;border:4px solid var(--blue);border-radius:20px;padding:14px 16px;
+    font-family:'Fredoka',sans-serif;font-size:clamp(18px,4vw,26px);color:var(--ink);flex:1;box-shadow:var(--shadow);
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .bubble::before{content:"";position:absolute;left:-16px;top:24px;border:12px solid transparent;border-right-color:var(--blue);}
+  .spk{border:none;background:var(--sun);border-radius:50%;width:42px;height:42px;font-size:20px;cursor:pointer;
+    box-shadow:0 3px 0 #d9a800;flex:none;}
+  .answers{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin:10px 0;}
+  .feedback{text-align:center;font-family:'Fredoka',sans-serif;font-size:22px;min-height:30px;font-weight:600;}
+  .feedback.good{color:var(--grass-dark);}
+  .feedback.bad{color:var(--coral-dark);}
+  .shake{animation:shake .4s;}
+  @keyframes shake{25%{transform:translateX(-8px);}75%{transform:translateX(8px);}}
+  details{margin-top:16px;background:rgba(255,255,255,.6);border-radius:16px;padding:6px 14px;border:3px solid #fff;}
+  details summary{font-family:'Fredoka',sans-serif;font-weight:600;cursor:pointer;font-size:16px;color:var(--ink);padding:8px 0;}
+  details p{font-weight:700;color:#3d4654;font-size:14px;line-height:1.5;}
+  .confetti{position:fixed;top:-12px;width:12px;height:12px;z-index:99;border-radius:2px;pointer-events:none;}
+  @media(max-width:640px){.grid{grid-template-columns:repeat(2,1fr);gap:28px;padding:28px;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>🏙️ My City Map</h1>
+    <div class="right">
+      <button class="sound-toggle" id="soundBtn">🔇 Tap for sound</button>
+      <div class="score">⭐ <span id="stars">0</span></div>
+    </div>
+  </header>
+
+  <div class="steps">
+    <div class="step active" id="step1"><span class="n">1</span>Build your city</div>
+    <div class="step" id="step2"><span class="n">2</span>Talk &amp; ask the way</div>
+  </div>
+
+  <section id="build">
+    <div class="panel">
+      <h2>👇 Choose the places</h2>
+      <p class="hint">Tap a word, then tap an empty space on the map. Tap a building again to remove it.</p>
+      <div class="tray" id="tray"></div>
+    </div>
+    <div class="city">
+      <div class="bus">🚌</div>
+      <div class="tram">🚊</div>
+      <div class="grid" id="grid"></div>
+    </div>
+    <div class="btnrow">
+      <button class="btn coral" id="toTalk" disabled>Done! Let's talk 🗣️ <span id="placedCount" style="font-size:14px"></span></button>
+    </div>
+  </section>
+
+  <section id="talk">
+    <div class="panel">
+      <div class="stage">
+        <div class="guy">🧑‍🦱</div>
+        <div class="bubble" id="bubble"><span id="bubbleText">Excuse me…</span><button class="spk" id="bubbleSpk">🔊</button></div>
+      </div>
+      <div class="answers" id="answers"></div>
+      <div class="feedback" id="feedback"></div>
+    </div>
+    <div class="btnrow">
+      <button class="btn green" id="newQ">New question 🎲</button>
+      <button class="btn ghost" id="backBuild">← Edit my city</button>
+    </div>
+  </section>
+
+  <details>
+    <summary>👩‍🏫 Для вчителя — як грати</summary>
+    <p><b>Звук:</b> натисни «Tap for sound» один раз — браузер вимагає клік, щоб дозволити озвучку. Якщо у вбудованому прев'ю мовчить — відкрий цей .html файл прямо в Chrome.</p>
+    <p><b>Крок 1.</b> Учень тицяє слово, тоді порожню ділянку. Мінімум 4 будівлі, щоб піти далі.</p>
+    <p><b>Крок 2.</b> «Перехожий» питає <i>Is there a …?</i> Учень дивиться на свою карту → <i>Yes, there is / No, there isn't</i>. Якщо «так» — <i>How do I get to the …?</i> → <i>You can take the bus / tram</i>. Кнопка 🔊 повторює фразу.</p>
+  </details>
+
+</div>
+
+<script>
+"use strict";
+const PLACES = [
+  {key:'castle',label:'castle',em:'🏰'},
+  {key:'cinema',label:'cinema',em:'🎬'},
+  {key:'hospital',label:'hospital',em:'🏥'},
+  {key:'library',label:'library',em:'📚'},
+  {key:'museum',label:'museum',em:'🏛️'},
+  {key:'park',label:'park',em:'🌳'},
+  {key:'playground',label:'playground',em:'🛝'},
+  {key:'police station',label:'police station',em:'🚓'},
+  {key:'restaurant',label:'restaurant',em:'🍽️'},
+  {key:'school',label:'school',em:'🏫'},
+  {key:'shopping centre',label:'shopping centre',em:'🛍️'},
+  {key:'skate park',label:'skate park',em:'🛹'},
+  {key:'sports centre',label:'sports centre',em:'⚽'},
+  {key:'station',label:'station',em:'🚉'},
+  {key:'university',label:'university',em:'🎓'},
+];
+const LOTS = 12, MIN_PLACED = 4;
+const byKey = k => PLACES.find(p => p.key === k) || null;
+
+let selectedKey = null;
+let placed = {};
+let usedKeys = new Set();
+let stars = 0;
+
+const $ = id => document.getElementById(id);
+const trayEl = $('tray'), gridEl = $('grid'), starsEl = $('stars');
+
+/* ---------------- SOUND ---------------- */
+let soundOn = false;
+let voice = null;
+function pickVoice(){
+  try{
+    const vs = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+    voice = vs.find(v => /en-GB|en_GB/i.test(v.lang)) ||
+            vs.find(v => /^en/i.test(v.lang)) || null;
+  }catch(e){ voice = null; }
+}
+if('speechSynthesis' in window){
+  pickVoice();
+  speechSynthesis.onvoiceschanged = pickVoice;
+}
+function speak(text){
+  if(!soundOn || !text || !('speechSynthesis' in window)) return;
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-GB'; u.rate = 0.92; u.pitch = 1.05;
+    if(voice) u.voice = voice;
+    speechSynthesis.speak(u);
+  }catch(e){ /* ignore */ }
+}
+$('soundBtn').addEventListener('click', () => {
+  soundOn = !soundOn;
+  const b = $('soundBtn');
+  if(soundOn){
+    b.textContent = '🔊 Sound ON';
+    b.classList.add('on');
+    pickVoice();
+    speak('Sound on!');     // unlock + test inside the user gesture
+  }else{
+    b.textContent = '🔇 Tap for sound';
+    b.classList.remove('on');
+    try{ speechSynthesis.cancel(); }catch(e){}
+  }
+});
+
+/* ---------------- STEP 1: BUILD ---------------- */
+function renderTray(){
+  trayEl.innerHTML = '';
+  PLACES.forEach(p => {
+    const b = document.createElement('button');
+    b.className = 'tile' + (usedKeys.has(p.key) ? ' used' : '') + (selectedKey === p.key ? ' selected' : '');
+    b.innerHTML = '<span class="em">' + p.em + '</span>' + p.label;
+    b.addEventListener('click', () => {
+      selectedKey = (selectedKey === p.key) ? null : p.key;
+      renderTray(); renderGrid();
+    });
+    trayEl.appendChild(b);
+  });
+}
+function renderGrid(){
+  gridEl.innerHTML = '';
+  for(let i = 0; i < LOTS; i++){
+    const lot = document.createElement('div');
+    const key = placed[i];
+    const p = key ? byKey(key) : null;
+    if(p){
+      lot.className = 'lot filled';
+      lot.innerHTML = '<span class="bem">' + p.em + '</span><span class="blabel">' + p.label + '</span>';
+      lot.addEventListener('click', () => {
+        delete placed[i]; usedKeys.delete(key);
+        renderTray(); renderGrid(); updateGate();
+      });
+    }else{
+      lot.className = 'lot' + (selectedKey ? ' droppable' : '');
+      lot.innerHTML = '<span class="plus">＋</span>';
+      lot.addEventListener('click', () => {
+        if(!selectedKey) return;
+        placed[i] = selectedKey; usedKeys.add(selectedKey); selectedKey = null;
+        renderTray(); renderGrid(); updateGate();
+      });
+    }
+    gridEl.appendChild(lot);
+  }
+}
+const placedKeys = () => Object.values(placed).filter(Boolean);
+function updateGate(){
+  const n = placedKeys().length;
+  $('placedCount').textContent = '(' + n + '/' + MIN_PLACED + ')';
+  $('toTalk').disabled = n < MIN_PLACED;
+}
+
+/* ---------------- NAV ---------------- */
+function goTalk(){
+  $('build').style.display = 'none';
+  $('talk').style.display = 'block';
+  $('step1').classList.remove('active');
+  $('step2').classList.add('active');
+  newQuestion();
+}
+function goBuild(){
+  $('talk').style.display = 'none';
+  $('build').style.display = 'block';
+  $('step2').classList.remove('active');
+  $('step1').classList.add('active');
+}
+$('toTalk').addEventListener('click', goTalk);
+$('backBuild').addEventListener('click', goBuild);
+$('newQ').addEventListener('click', newQuestion);
+
+/* ---------------- STEP 2: TALK ---------------- */
+const bubbleText = $('bubbleText'), answersEl = $('answers'), feedbackEl = $('feedback');
+let lastSpoken = '', currentPlace = null, isHere = false;
+
+$('bubbleSpk').addEventListener('click', () => {
+  if(!soundOn){ $('soundBtn').click(); }      // first tap also turns sound on
+  speak(lastSpoken);
+});
+
+function setBubble(html, sayText){
+  bubbleText.innerHTML = html;
+  lastSpoken = sayText || '';
+  speak(lastSpoken);
+}
+function addAnswer(text, fn, cls){
+  const b = document.createElement('button');
+  b.className = cls || 'btn';
+  b.innerHTML = text;
+  b.addEventListener('click', fn);
+  answersEl.appendChild(b);
+}
+function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+function newQuestion(){
+  feedbackEl.textContent = ''; feedbackEl.className = 'feedback';
+  answersEl.innerHTML = '';
+
+  const present = placedKeys();
+  const absent = PLACES.filter(p => !present.includes(p.key)).map(p => p.key);
+
+  let key;
+  if(present.length && (Math.random() < 0.55 || absent.length === 0)){
+    key = pick(present);
+  }else if(absent.length){
+    key = pick(absent);
+  }else{
+    key = PLACES[0].key;
+  }
+  currentPlace = byKey(key) || PLACES[0];
+  isHere = present.includes(currentPlace.key);
+
+  const art = /^[aeiou]/i.test(currentPlace.label) ? 'an' : 'a';
+  const q = 'Excuse me. Is there ' + art + ' ' + currentPlace.label + '?';
+  setBubble('<span class="em">' + currentPlace.em + '</span> ' + q, q);
+
+  addAnswer('Yes, there is. ✅', () => answerYesNo(true), 'btn');
+  addAnswer("No, there isn't. ❌", () => answerYesNo(false), 'btn coral');
+}
+
+function answerYesNo(saidYes){
+  if(saidYes === isHere){
+    if(isHere){
+      const q = 'Great! How do I get to the ' + currentPlace.label + '?';
+      setBubble('👍 ' + q, q);
+      feedbackEl.textContent = 'Nice! Now tell the way 🚌';
+      feedbackEl.className = 'feedback good';
+      answersEl.innerHTML = '';
+      addAnswer('You can take the bus 🚌', () => answerWay('bus'), 'btn');
+      addAnswer('You can take the tram 🚊', () => answerWay('tram'), 'btn green');
+    }else{
+      feedbackEl.textContent = 'Correct! It is not on your map. ⭐';
+      feedbackEl.className = 'feedback good';
+      addStar(); celebrate();
+      setBubble('Oh, OK. Thank you anyway! 🙂', 'Oh, OK. Thank you anyway!');
+      answersEl.innerHTML = '';
+      addAnswer('Next 🎲', newQuestion, 'btn green');
+    }
+  }else{
+    feedbackEl.textContent = 'Oops! Look at your map again 👀';
+    feedbackEl.className = 'feedback bad';
+    const bubble = $('bubble');
+    bubble.classList.add('shake');
+    setTimeout(() => bubble.classList.remove('shake'), 420);
+  }
+}
+
+function answerWay(mode){
+  const sent = 'You can take the ' + mode + '.';
+  feedbackEl.textContent = 'Perfect directions! ⭐';
+  feedbackEl.className = 'feedback good';
+  setBubble('🚏 ' + sent + ' Thank you so much! 😄', sent + ' Thank you so much!');
+  addStar(); celebrate();
+  answersEl.innerHTML = '';
+  addAnswer('Next 🎲', newQuestion, 'btn green');
+}
+
+function addStar(){ stars++; starsEl.textContent = stars; }
+
+function celebrate(){
+  const colors = ['#ff6b6b','#ffd23f','#2a9df4','#8ed968','#ff9f1c','#9b5de5'];
+  for(let i = 0; i < 70; i++){
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.left = (Math.random() * 100) + 'vw';
+    c.style.background = colors[i % colors.length];
+    document.body.appendChild(c);
+    const dur = 1600 + Math.random() * 1400;
+    c.animate(
+      [{transform:'translateY(0) rotate(0)',opacity:1},
+       {transform:'translateY(105vh) rotate(' + (720 * (Math.random() < .5 ? 1 : -1)) + 'deg)',opacity:1}],
+      {duration:dur,easing:'cubic-bezier(.3,.7,.4,1)'}
+    );
+    setTimeout(() => c.remove(), dur);
+  }
+}
+
+/* ---------------- INIT ---------------- */
+renderTray(); renderGrid(); updateGate();
+</script>
+</body>
+</html>
